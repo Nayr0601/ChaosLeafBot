@@ -1,0 +1,23 @@
+{
+  "name": "chaosleafbot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start:dev": "nodemon ./src/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@discordjs/rest": "^1.7.0",
+    "discord.js": "^14.9.0",
+    "jimp": "^0.22.12",
+    "mysql": "^2.18.1"
+  },
+  "devDependencies": {
+    "dotenv": "^16.0.3",
+    "nodemon": "^3.1.0"
+  }
+}
