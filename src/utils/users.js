@@ -113,10 +113,6 @@ module.exports = {
             sql_fields.push(`${key} = :${key}`);
         }
 
-        console.log("SQL FIELDS:")
-        console.log(sql_fields);
-        console.log("NFB:");
-        console.log(_nfb);
         var sql = `UPDATE nfbs SET ${sql_fields.join(", ")}  WHERE ID = "${_nfb.id}"`;
         var sql_post = _nfb;
 

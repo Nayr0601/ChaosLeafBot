@@ -61,7 +61,8 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                     CreateRandomNFB((images) => {
 
                         if (!images) return interaction.editReply({ content: `Couldn't make a new nfb`, ephemeral: false });
-                        let oldNfb = userData.parts != null ? { "name": GetPartsInfo(userData.parts)[1], "currentOwner": "" } : null;
+                        let oldNfb = userData.parts != null ? { "id": GetPartsInfo(userData.parts)[1], "currentOwner": "" } : null;
+
                         CombineImages(images, async (tempFile) => {
                             // Maybe send this in a hidden channel and reply with the link to the image
                             replyMessage = await interaction.editReply({
@@ -78,7 +79,7 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                             userData.nfbLink = imageUrl;
                             userData.parts = images[2];
                             USERS.update_nfb_user(userData);
-                            USERS.update_nfbs({ "id": images[1], "nfbLink": imageUrl, "currentOwner": user.id}, oldNfb);
+                            USERS.update_nfbs({ "id": images[1], "nfbLink": imageUrl, "currentOwner": user.id, "timesCreated": images[3].timesCreated + 1 }, oldNfb);
                         });
                     });
                 })
@@ -118,8 +119,6 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                 //var sql = `DROP TABLE users`;
                 var sql = `DROP TABLE nfbs`;
 
-
-
                 DB.query(sql, function (err, result) {
                     if (err) {
                         console.log(err)
@@ -131,7 +130,7 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
             }
             else if (subcommand === 'createtable') {
                 //var sql = `CREATE TABLE users (ID varchar(32) NOT NULL, nfbLink varchar(500) DEFAULT "", parts JSON, tempPart JSON, Borbcoins int DEFAULT 0, UNIQUE (ID))`;
-                var sql = `CREATE TABLE nfbs (ID varchar(255) NOT NULL, nfbLink varchar(500), currentOwner varchar(32), firstCreated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, lastCreated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, UNIQUE (ID))`;
+                var sql = `CREATE TABLE nfbs (ID varchar(255) NOT NULL, nfbLink varchar(500) DEFAULT "", currentOwner varchar(32) DEFAULT "", firstCreated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, lastCreated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, timesCreated INT DEFAULT 0, UNIQUE (ID))`;
                 //var sql = `ALTAR TABLE nfbs ADD Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP`;
 
                 DB.query(sql, function (err, result) {
@@ -187,31 +186,30 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
 
                 USERS.get_nfb_user(targetUser, (userData) => {
                     var nfbId = GetPartsInfo(userData.parts)[1];
-                    
+
                     USERS.get_nfb(nfbId, (_nfb) => {
-                        console.log(_nfb)
                         if (!_nfb) return interaction.editReply({
                             content: `No info found!`
                         });
-
-                        console.log(_nfb);
 
                         var firstDate = new Date(_nfb.firstCreated);
                         var lastDate = new Date(_nfb.lastCreated);
 
                         var info;
-                        if (_nfb.firstCreated != _nfb.lastCreated) {
-                            info = `**First Created:** ${firstDate.toLocaleDateString("en-GB")} ${firstDate.toLocaleTimeString("en-US")}` +
-                            `\n**Last created:** ${lastDate.toLocaleDateString("en-GB")} ${lastDate.toLocaleTimeString("en-US")}`;
-                        }
-                        else {
+                        if (firstDate.getTime() == lastDate.getTime()) {
                             info = `**Created:** ${firstDate.toLocaleDateString("en-GB")} ${firstDate.toLocaleTimeString("en-US")}`
                         }
-                        
+                        else {
+                            info = `**First created:** ${firstDate.toLocaleDateString("en-GB")} ${firstDate.toLocaleTimeString("en-US")}` +
+                            `\n**Last created:** ${lastDate.toLocaleDateString("en-GB")} ${lastDate.toLocaleTimeString("en-US")}`;
+                        }
 
+                        info += `**\nTimes created:** ${_nfb.timesCreated}`
+                        
                         replyMessage = interaction.editReply({
-                            content: `**Current owner: **${_nfb.currentOwner}\n${info}`
+                            content: _nfb.nfbLink
                         });
+                        return interaction.channel.send(`**Current owner: **${targetUser.username}\n${info}`);
                     });
                 });
             }
@@ -255,7 +253,7 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                             userData.tempPart = null;
 
                             USERS.update_nfb_user(userData);
-                            USERS.update_nfbs({ "id": images[1], "nfbLink": imageUrl, "currentOwner": user.id }, { "id": oldNfbName, "currentOwner": "" });
+                            USERS.update_nfbs({ "id": images[1], "nfbLink": imageUrl, "currentOwner": user.id }, { "id": oldNfbName, "currentOwner": "", "timesCreated": newNfb.timesCreated + 1 });
                         })
                     });
                 });
@@ -336,9 +334,9 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                     .setName('info')
                     .setDescription('Get Info about your nfb')
                     .addUserOption((option) =>
-                    option.setName('user')
-                        .setDescription('Info about users nfb')
-                )
+                        option.setName('user')
+                            .setDescription('Info about users nfb')
+                    )
             )
             .addSubcommand((subcommand) =>
                 subcommand
@@ -367,6 +365,5 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                     .setName('createtable')
                     .setDescription('Createtable')
             )*/
-
     }
 }
