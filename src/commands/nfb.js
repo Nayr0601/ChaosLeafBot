@@ -61,7 +61,7 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                     CreateRandomNFB((images) => {
 
                         if (!images) return interaction.editReply({ content: `Couldn't make a new nfb`, ephemeral: false });
-
+                        let oldNfb = userData.parts != null ? { "name": GetPartsInfo(userData.parts)[1], "currentOwner": "" } : null;
                         CombineImages(images, async (tempFile) => {
                             // Maybe send this in a hidden channel and reply with the link to the image
                             replyMessage = await interaction.editReply({
@@ -77,13 +77,11 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                             userData.Borbcoins -= PRICE;
                             userData.nfbLink = imageUrl;
                             userData.parts = images[2];
-
                             USERS.update_nfb_user(userData);
-                            USERS.add_nfb({"name":images[1], "link":imageUrl})
+                            USERS.update_nfbs({ "id": images[1], "nfbLink": imageUrl, "currentOwner": user.id}, oldNfb);
                         });
                     });
                 })
-
             }
 
             else if (subcommand === 'remove') {
@@ -133,8 +131,8 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
             }
             else if (subcommand === 'createtable') {
                 //var sql = `CREATE TABLE users (ID varchar(32) NOT NULL, nfbLink varchar(500) DEFAULT "", parts JSON, tempPart JSON, Borbcoins int DEFAULT 0, UNIQUE (ID))`;
-                var sql = `CREATE TABLE nfbs (ID varchar(255) NOT NULL, nfbLink varchar(500) NOT NULL, Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE (ID))`;
-                //var sql = `DROP TABLE users`;
+                var sql = `CREATE TABLE nfbs (ID varchar(255) NOT NULL, nfbLink varchar(500), currentOwner varchar(32), firstCreated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, lastCreated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, UNIQUE (ID))`;
+                //var sql = `ALTAR TABLE nfbs ADD Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP`;
 
                 DB.query(sql, function (err, result) {
                     if (err) {
@@ -181,7 +179,40 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                         "partType": [partString],
                     }
                     USERS.update_nfb_user(userData)
+                });
+            }
+            else if (subcommand === 'info') {
+                const userID = interaction.options.get('user') ? interaction.options.get('user').value : interaction.user.id;
+                const targetUser = interaction.options.get('user') ? await client.users.fetch(userID) : interaction.user;
 
+                USERS.get_nfb_user(targetUser, (userData) => {
+                    var nfbId = GetPartsInfo(userData.parts)[1];
+                    
+                    USERS.get_nfb(nfbId, (_nfb) => {
+                        console.log(_nfb)
+                        if (!_nfb) return interaction.editReply({
+                            content: `No info found!`
+                        });
+
+                        console.log(_nfb);
+
+                        var firstDate = new Date(_nfb.firstCreated);
+                        var lastDate = new Date(_nfb.lastCreated);
+
+                        var info;
+                        if (_nfb.firstCreated != _nfb.lastCreated) {
+                            info = `**First Created:** ${firstDate.toLocaleDateString("en-GB")} ${firstDate.toLocaleTimeString("en-US")}` +
+                            `\n**Last created:** ${lastDate.toLocaleDateString("en-GB")} ${lastDate.toLocaleTimeString("en-US")}`;
+                        }
+                        else {
+                            info = `**Created:** ${firstDate.toLocaleDateString("en-GB")} ${firstDate.toLocaleTimeString("en-US")}`
+                        }
+                        
+
+                        replyMessage = interaction.editReply({
+                            content: `**Current owner: **${_nfb.currentOwner}\n${info}`
+                        });
+                    });
                 });
             }
             else if (subcommand === 'merge') {
@@ -194,20 +225,19 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                     if (userData.tempPart === null)
                         return interaction.editReply({ content: `You need to buy a part first with /nfb buy` });
 
+                    var oldNfbName = GetPartsInfo(userData.parts)[1];
 
                     let parts = userData.parts
+
                     parts[userData.tempPart.partType] = userData.tempPart.name;
 
                     let images = GetPartsInfo(parts)
 
                     USERS.get_nfb(images[1], (newNfb) => {
-
                         if (!newNfb) return interaction.editReply({ content: `This nfb already exist`, ephemeral: false });
                         CombineImages(images, async (tempFile) => {
 
-                            
-
-                            // Maybe send this in a hidden channel and reply with the link to the image
+                            // Maybe send image in a hidden channel and reply with the link to the image
                             let replyMessage = await interaction.editReply({
                                 content: `Part merged`,
                                 files: [{
@@ -215,22 +245,19 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                                     name: images[1] + '.png',
                                 }],
                             });
-                            
-                            
-                            
+
                             // Get the link to the image send above
                             let imageUrl = replyMessage.attachments.first().url;
-                            
+
                             userData.Borbcoins -= PRICE;
                             userData.nfbLink = imageUrl;
                             userData.parts = images[2];
                             userData.tempPart = null;
-                            
+
                             USERS.update_nfb_user(userData);
-                            USERS.add_nfb({"name":images[1], "link":imageUrl});
+                            USERS.update_nfbs({ "id": images[1], "nfbLink": imageUrl, "currentOwner": user.id }, { "id": oldNfbName, "currentOwner": "" });
                         })
                     });
-
                 });
             }
         }
@@ -303,6 +330,15 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                 subcommand
                     .setName('merge')
                     .setDescription('Replace a part of your nfb with another')
+            )
+            .addSubcommand((subcommand) =>
+                subcommand
+                    .setName('info')
+                    .setDescription('Get Info about your nfb')
+                    .addUserOption((option) =>
+                    option.setName('user')
+                        .setDescription('Info about users nfb')
+                )
             )
             .addSubcommand((subcommand) =>
                 subcommand

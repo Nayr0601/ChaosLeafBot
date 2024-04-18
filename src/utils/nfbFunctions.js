@@ -49,7 +49,7 @@ async function CreateRandomNFB(_cb, tries = 0) {
             return _cb(null);
         }
         
-        if (!newNfb) {
+        if (newNfb.currentOwner != null) {
             CreateRandomNFB(_cb, tries + 1);
         }
         else return _cb([imagePaths, imageName, parts]);
@@ -95,7 +95,7 @@ function GetPartsInfo(parts) {
 
 
 function GetRandomPart(part) {
-    let borbImage = IMAGES[part][getRndInteger(0, IMAGES[part].length)]
+    let borbImage = IMAGES[part][4]//getRndInteger(0, IMAGES[part].length)]
     let imagePath = image_directory + part + "/" + borbImage
     let imageName = borbImage.split(".")[0];
 

@@ -32,7 +32,7 @@ module.exports = {
 
     update_nfb_user(_user) {
         var sql_fields = [];
-        
+
         if (_user.parts !== null) _user.parts = JSON.stringify(_user.parts);
         if (_user.tempPart !== null) _user.tempPart = JSON.stringify(_user.tempPart);
 
@@ -40,7 +40,7 @@ module.exports = {
             //console.log(`${key}: ${value}`);
             sql_fields.push(`${key} = :${key}`);
         }
-        
+
         var sql = `UPDATE users SET ${sql_fields.join(", ")} WHERE ID = "${_user.ID}"`;
         var query_fields = _user;
         DB.query(sql, query_fields, function (err, result) {
@@ -48,7 +48,7 @@ module.exports = {
                 console.log(err)
                 return false;
             }
-            
+
         });
     },
 
@@ -60,7 +60,22 @@ module.exports = {
                 //console.log(err)
                 return false;
             }
-            
+
+            if (!result || result.length) return false;
+
+            return _cb(result);
+        });
+    },
+
+    add_nfb(nfb, _cb) {
+        var sql = `INSERT INTO nfbs (ID) VALUES ("${nfb}")`;
+
+        DB.query(sql, function (err, result) {
+            if (err) {
+                //console.log(err)
+                return false;
+            }
+
             if (!result || result.length) return false;
 
             return _cb(result);
@@ -70,6 +85,7 @@ module.exports = {
     async get_nfb(nfb, _cb) {
         var sql = `SELECT * FROM nfbs WHERE ID = "${nfb}"`;
 
+
         DB.query(sql, function (err, result) {
             if (err) {
                 console.log(err);
@@ -77,26 +93,45 @@ module.exports = {
             }
 
             if (!result || result.length === 0) {
-                // add user to db
-                
-                
-                return _cb(true);
+                // nfb doesn't exist yet or isn't owned by anyone
+                USERS.add_nfb(nfb, (res) => {
+                    if (!res) return false;
+
+                    USERS.get_nfb(nfb, _cb);
+                });
+                return false;
             }
 
-            return _cb(false);
+            return _cb(result[0]);
         });
     },
 
-    add_nfb(nfb) {
-        var sql = `INSERT INTO nfbs (ID, nfbLink) VALUES ("${nfb.name}", "${nfb.link}")`;
+    update_nfb(_nfb) {
+        var sql_fields = []
+        for (const [key, value] of Object.entries(_nfb)) {
+            //console.log(`${key}: ${value}`);
+            sql_fields.push(`${key} = :${key}`);
+        }
 
-        DB.query(sql, function (err, result) {
+        console.log("SQL FIELDS:")
+        console.log(sql_fields);
+        console.log("NFB:");
+        console.log(_nfb);
+        var sql = `UPDATE nfbs SET ${sql_fields.join(", ")}  WHERE ID = "${_nfb.id}"`;
+        var sql_post = _nfb;
+
+        DB.query(sql, sql_post, function (err, result) {
             if (err) {
                 //console.log(err)
                 return false;
             }
-            
+
             if (!result || result.length) return false;
         });
     },
+
+    update_nfbs(newNfb, oldNfb) {
+        USERS.update_nfb(newNfb);
+        if (oldNfb != null) USERS.update_nfb(oldNfb);
+    }
 }
