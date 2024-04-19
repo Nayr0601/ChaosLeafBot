@@ -10,7 +10,8 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
     async run(client, interaction) {
         const subGroup = interaction.options.getSubcommandGroup();
         const subcommand = interaction.options.getSubcommand();
-        const PRICE = 50;
+        const NFB_PRICE = 200;
+        const NFB_PART_PRICE = 60;
         const userID = interaction.user.id;
         const user = interaction.user;
 
@@ -52,10 +53,10 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
             else if (subcommand === 'create') {
                 USERS.get_nfb_user(user, async (userData) => {
 
-                    if (!userData || userData.Borbcoins < PRICE) {
+                    if (!userData || userData.Borbcoins < NFB_PRICE) {
                         console.log("Not enough coins")
 
-                        return interaction.editReply({ content: `Not enough Borbcoins`, ephemeral: false });
+                        return interaction.editReply({ content: `Not enough Borbcoins. It cost **${NFB_PRICE}** borbcoins to create a borb. Current balance: ${userData.Borbcoins}`, ephemeral: false });
                     }
 
                     CreateRandomNFB((images) => {
@@ -75,7 +76,7 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                             // Get the link to the image send above
                             let imageUrl = replyMessage.attachments.first().url;
 
-                            userData.Borbcoins -= PRICE;
+                            userData.Borbcoins -= NFB_PRICE;
                             userData.nfbLink = imageUrl;
                             userData.parts = images[2];
                             USERS.update_nfb_user(userData);
@@ -163,16 +164,17 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
             else if (subcommand === 'buy') {
                 USERS.get_nfb_user(user, (userData) => {
                     const partString = interaction.options.get('part').value
+                    if (userData.Borbcoins < NFB_PART_PRICE) return interaction.editReply({ content: `Not enough Borbcoins. Cost **${NFB_PART_PRICE}** borbscoins. **Current balance:** ${userData.Borbcoins}.`, ephemeral: false });
                     const part = GetRandomPart(partString)
-
+                    
+                    userData.Borbcoins -= NFB_PART_PRICE;
                     replyMessage = interaction.editReply({
-                        content: `Would you like replace **${userData.parts[partString]}** with **${part[1]}**?\nUse /nfb merge`,
+                        content: `Would you like replace **${userData.parts[partString]}** with **${part[1]}**?\nUse **/nfb merge** to create you new borb\n**New balance:** ${userData.Borbcoins}`,
                         files: [{
                             attachment: part[0],
                             name: part[1] + ".png",
                         }],
                     });
-
                     userData.tempPart = {
                         "name": part[1],
                         "partType": [partString],
@@ -223,19 +225,27 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                     if (userData.tempPart === null)
                         return interaction.editReply({ content: `You need to buy a part first with /nfb buy` });
 
+                        // Get name of current NFB
                     var oldNfbName = GetPartsInfo(userData.parts)[1];
 
                     let parts = userData.parts
 
+                    // Replace part of NFB with bought part.
                     parts[userData.tempPart.partType] = userData.tempPart.name;
 
+                    // Get info about nfb
                     let images = GetPartsInfo(parts)
 
                     USERS.get_nfb(images[1], (newNfb) => {
                         if (!newNfb) return interaction.editReply({ content: `This nfb already exist`, ephemeral: false });
                         CombineImages(images, async (tempFile) => {
 
-                            // Maybe send image in a hidden channel and reply with the link to the image
+                            // ------------------------------------------------------------------------- \\
+                            // ------------------------------------------------------------------------- \\
+                            // Maybe send image in a hidden channel and reply with the link to the image \\
+                            // ------------------------------------------------------------------------- \\
+                            // ------------------------------------------------------------------------- \\
+
                             let replyMessage = await interaction.editReply({
                                 content: `Part merged`,
                                 files: [{
@@ -247,7 +257,7 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                             // Get the link to the image send above
                             let imageUrl = replyMessage.attachments.first().url;
 
-                            userData.Borbcoins -= PRICE;
+                            userData.Borbcoins -= NFB_PRICE;
                             userData.nfbLink = imageUrl;
                             userData.parts = images[2];
                             userData.tempPart = null;
@@ -352,7 +362,7 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                             .setName('amount')
                             .setDescription('Borbcoins to give')
                             .setRequired(true)
-                            .setMinValue(1)
+                            .setMinValue(-10000)
                     )
             )/*
             .addSubcommand((subcommand) =>
