@@ -5,6 +5,16 @@ const image_directory = './src/Bits/';
 const splitSymbol = "_";
 
 
+function AddPartsToDB() {
+    for (var i = 0; i < folders.length; i++) {
+        var partType = folders[i]
+        for (var j = 0; j < IMAGES[partType].length; j++) {
+            USERS.add_part(IMAGES[partType][j], partType);
+        }
+    }
+}
+
+
 // Get images from images folder
 function GetImages() {
     let files = {};
@@ -13,6 +23,7 @@ function GetImages() {
 
         files[folders[i]] = fs.readdirSync(image_directory + folders[i] + "/").map(file => {
             if (!file.endsWith(".png")) console.log(file);
+            file = file.split(".")[0]
             return file;
         });
     }
@@ -97,7 +108,16 @@ function GetPartsInfo(parts) {
 function GetRandomPart(part) {
     let borbImage = IMAGES[part][getRndInteger(0, IMAGES[part].length)]
     let imagePath = image_directory + part + "/" + borbImage
-    let imageName = borbImage.split(".")[0];
+    let imageName = borbImage;
+
+    return [imagePath, imageName];
+}
+
+function GetPart(part, index) {
+    if (IMAGES[part].length <= index) return false;
+    let borbImage = IMAGES[part][index]
+    let imagePath = image_directory + part + "/" + borbImage
+    let imageName = borbImage;
 
     return [imagePath, imageName];
 }
@@ -110,6 +130,7 @@ module.exports = {
     GetImages,
     CreateRandomNFB,
     GetRandomPart,
+    GetPart,
     CombineImages,
     GetPartsInfo,
     getRndInteger

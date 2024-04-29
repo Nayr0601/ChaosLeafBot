@@ -1,6 +1,6 @@
 const BaseSlashCommand = require('../utils/BaseSlashCommand')
 const { SlashCommandBuilder } = require('discord.js');
-const { CreateRandomNFB, getRndInteger, GetPartsInfo, GetRandomPart, CombineImages } = require('../utils/nfbFunctions');
+const { CreateRandomNFB, getRndInteger, GetPartsInfo, GetRandomPart, GetPart, CombineImages } = require('../utils/nfbFunctions');
 
 module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
     constructor() {
@@ -10,6 +10,7 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
     async run(client, interaction) {
         const subGroup = interaction.options.getSubcommandGroup();
         const subcommand = interaction.options.getSubcommand();
+        const FIRST_NFB_PRICE = 50;
         const NFB_PRICE = 200;
         const NFB_PART_PRICE = 60;
         const userID = interaction.user.id;
@@ -20,15 +21,9 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
         if (subGroup === null) {
 
             if (subcommand === 'show') {
-
                 const userID = interaction.options.get('user') ? interaction.options.get('user').value : interaction.user.id;
                 const targetUser = interaction.options.get('user') ? await client.users.fetch(userID) : interaction.user;
-
-                console.log(Date.now());
-
                 USERS.get_nfb_user(targetUser, (target) => {
-
-                    console.log(target);
                     if (target == false || !target.nfbLink) {
                         return interaction.editReply(`${targetUser.username} don't have a NFB`);
                     }
@@ -37,26 +32,51 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                     }
                 });
             }
+
+            else if (subcommand === 'bal') {
+                const userID = interaction.options.get('user') ? interaction.options.get('user').value : interaction.user.id;
+                const targetUser = interaction.options.get('user') ? await client.users.fetch(userID) : interaction.user;
+
+                USERS.get_nfb_user(targetUser, (target) => {
+                    {
+                        return interaction.editReply(`**Current balance:** ${target.CurrentBorbcoins}`);
+                    }
+                });
+            }
+
+
             else if (subcommand === 'pet') {
                 USERS.get_nfb_user(user, (userData) => {
                     let amount = getRndInteger(10, 25);
 
-                    userData.Borbcoins += amount;
+                    let responseMessage;
+
+                    if (!userData.nfbLink) {
+                        amount = Math.floor(amount / 2);
+                        responseMessage = `You pet the NFB Prime since you don't have a NFB yet and got **${amount}** borbcoins.`
+                    }
+                    else {
+                        responseMessage = `You pet you NFB and got rewarded with **${amount}** borbcoins.`
+                    }
+
+                    userData.CurrentBorbcoins += amount;
+                    userData.TotalBorbcoins += amount;
 
                     USERS.update_nfb_user(userData);
 
-                    return interaction.editReply({ content: `You pet a borb and got ${amount} borbcoins\n**New Balance:** ${userData.Borbcoins}` });
+                    return interaction.editReply({ content: `${responseMessage}\n**New Balance:** ${userData.CurrentBorbcoins}` });
                 });
             }
 
 
             else if (subcommand === 'create') {
                 USERS.get_nfb_user(user, async (userData) => {
+                    if (userData.nfbLink == "" && userData.CurrentBorbcoins < FIRST_NFB_PRICE) {
+                        return interaction.editReply({ content: `Not enough Borbcoins. Your first NFB cost **${FIRST_NFB_PRICE}** borbcoins. Current balance: ${userData.CurrentBorbcoins}` });
+                    }
 
-                    if (!userData || userData.Borbcoins < NFB_PRICE) {
-                        console.log("Not enough coins")
-
-                        return interaction.editReply({ content: `Not enough Borbcoins. It cost **${NFB_PRICE}** borbcoins to create a borb. Current balance: ${userData.Borbcoins}`, ephemeral: false });
+                    if (userData.CurrentBorbcoins < NFB_PRICE) {
+                        return interaction.editReply({ content: `Not enough Borbcoins. It cost **${NFB_PRICE}** borbcoins to create a NFB. Current balance: ${userData.CurrentBorbcoins}` });
                     }
 
                     CreateRandomNFB((images) => {
@@ -76,7 +96,7 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                             // Get the link to the image send above
                             let imageUrl = replyMessage.attachments.first().url;
 
-                            userData.Borbcoins -= NFB_PRICE;
+                            userData.CurrentBorbcoins -= userData.nfbLink == "" ? FIRST_NFB_PRICE : NFB_PRICE;
                             userData.nfbLink = imageUrl;
                             userData.parts = images[2];
                             USERS.update_nfb_user(userData);
@@ -115,36 +135,6 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                 });
             }
 
-            else if (subcommand === 'droptable') {
-                //var sql = `CREATE TABLE users (ID varchar(32) NOT NULL, nfbLink varchar(500) DEFAULT "", parts JSON, tempPart JSON, Borbcoins int DEFAULT 0, UNIQUE (ID))`;
-                //var sql = `DROP TABLE users`;
-                var sql = `DROP TABLE nfbs`;
-
-                DB.query(sql, function (err, result) {
-                    if (err) {
-                        console.log(err)
-                        return interaction.editReply({ content: `An error occurred while connecting to the database`, ephemeral: true });
-                    }
-
-                    return interaction.editReply({ content: `Dropped table`, ephemeral: true })
-                });
-            }
-            else if (subcommand === 'createtable') {
-                //var sql = `CREATE TABLE users (ID varchar(32) NOT NULL, nfbLink varchar(500) DEFAULT "", parts JSON, tempPart JSON, Borbcoins int DEFAULT 0, UNIQUE (ID))`;
-                var sql = `CREATE TABLE nfbs (ID varchar(255) NOT NULL, nfbLink varchar(500) DEFAULT "", currentOwner varchar(32) DEFAULT "", firstCreated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, lastCreated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, timesCreated INT DEFAULT 0, UNIQUE (ID))`;
-                //var sql = `ALTAR TABLE nfbs ADD Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP`;
-
-                DB.query(sql, function (err, result) {
-                    if (err) {
-                        console.log(err)
-                        return interaction.editReply({ content: `An error occurred while connecting to the database`, ephemeral: true });
-                    }
-
-                    return interaction.editReply({ content: `Created table`, ephemeral: true })
-                });
-            }
-
-
             else if (subcommand === 'give') {
                 const userID = interaction.options.get('user').value
                 const targetUser = await client.users.fetch(userID)
@@ -152,24 +142,28 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
 
                 USERS.get_nfb_user(targetUser, (userData) => {
 
-                    userData.Borbcoins += amount;
+                    userData.CurrentBorbcoins += amount;
+                    userData.TotalBorbcoins += amount;
 
 
                     USERS.update_nfb_user(userData);
 
-                    return interaction.editReply({ content: `Gave ${amount} borbcoins to ${targetUser.username}. New Balance: ${userData.Borbcoins}` });
+                    return interaction.editReply({ content: `Gave ${amount} borbcoins to ${targetUser.username}. New Balance: ${userData.CurrentBorbcoins}` });
                 });
             }
 
-            else if (subcommand === 'buy') {
-                USERS.get_nfb_user(user, (userData) => {
-                    const partString = interaction.options.get('part').value
-                    if (userData.Borbcoins < NFB_PART_PRICE) return interaction.editReply({ content: `Not enough Borbcoins. Cost **${NFB_PART_PRICE}** borbscoins. **Current balance:** ${userData.Borbcoins}.`, ephemeral: false });
-                    const part = GetRandomPart(partString)
-                    
-                    userData.Borbcoins -= NFB_PART_PRICE;
+            else if (subcommand === 'givepart') {
+                const partString = interaction.options.get('part').value
+                const index = interaction.options.get('index').value
+                const userID = interaction.options.get('user').value
+                const targetUser = await client.users.fetch(userID)
+
+                USERS.get_nfb_user(targetUser, (userData) => {
+                    const part = GetPart(partString, index)
+
+                    if (!part) return interaction.editReply(`Flokc have been lazy, we don't have ${index} different ${partString} :P`)
                     replyMessage = interaction.editReply({
-                        content: `Would you like replace **${userData.parts[partString]}** with **${part[1]}**?\nUse **/nfb merge** to create you new borb\n**New balance:** ${userData.Borbcoins}`,
+                        content: `${targetUser.username} have been given ${part[1]}.`,
                         files: [{
                             attachment: part[0],
                             name: part[1] + ".png",
@@ -182,6 +176,30 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                     USERS.update_nfb_user(userData)
                 });
             }
+
+            else if (subcommand === 'buy') {
+                USERS.get_nfb_user(user, (userData) => {
+                    const partString = interaction.options.get('part').value
+                    if (userData.CurrentBorbcoins < NFB_PART_PRICE)
+                        return interaction.editReply({ content: `Not enough Borbcoins. Cost **${NFB_PART_PRICE}** borbscoins. **Current balance:** ${userData.CurrentBorbcoins}.`, ephemeral: false });
+                    const part = GetRandomPart(partString)
+
+                    userData.CurrentBorbcoins -= NFB_PART_PRICE;
+                    replyMessage = interaction.editReply({
+                        content: `Would you like replace **${userData.parts[partString]}** with **${part[1]}**?\nUse **/nfb merge** to create you new borb\n**New balance:** ${userData.CurrentBorbcoins}`,
+                        files: [{
+                            attachment: part[0],
+                            name: part[1] + ".png",
+                        }],
+                    });
+                    userData.tempPart = {
+                        "name": part[1],
+                        "partType": [partString],
+                    }
+                    USERS.update_nfb_user(userData)
+                });
+            }
+
             else if (subcommand === 'info') {
                 const userID = interaction.options.get('user') ? interaction.options.get('user').value : interaction.user.id;
                 const targetUser = interaction.options.get('user') ? await client.users.fetch(userID) : interaction.user;
@@ -203,11 +221,11 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                         }
                         else {
                             info = `**First created:** ${firstDate.toLocaleDateString("en-GB")} ${firstDate.toLocaleTimeString("en-US")}` +
-                            `\n**Last created:** ${lastDate.toLocaleDateString("en-GB")} ${lastDate.toLocaleTimeString("en-US")}`;
+                                `\n**Last created:** ${lastDate.toLocaleDateString("en-GB")} ${lastDate.toLocaleTimeString("en-US")}`;
                         }
 
                         info += `**\nTimes created:** ${_nfb.timesCreated}`
-                        
+
                         replyMessage = interaction.editReply({
                             content: _nfb.nfbLink
                         });
@@ -217,15 +235,21 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
             }
             else if (subcommand === 'merge') {
                 USERS.get_nfb_user(user, (userData) => {
-
                     if (userData.nfbLink === "")
                         return interaction.editReply({ content: `You need to create a nfb first.` });
-
 
                     if (userData.tempPart === null)
                         return interaction.editReply({ content: `You need to buy a part first with /nfb buy` });
 
-                        // Get name of current NFB
+                    const option = interaction.options.get('option').value
+                    
+                    if (option == "decline") {
+
+                        // Update NFB PRIME
+                        return
+                    }
+
+                    // Get name of current NFB
                     var oldNfbName = GetPartsInfo(userData.parts)[1];
 
                     let parts = userData.parts
@@ -257,7 +281,7 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                             // Get the link to the image send above
                             let imageUrl = replyMessage.attachments.first().url;
 
-                            userData.Borbcoins -= NFB_PRICE;
+                            //userData.CurrentBorbcoins -= NFB_PRICE;
                             userData.nfbLink = imageUrl;
                             userData.parts = images[2];
                             userData.tempPart = null;
@@ -282,6 +306,15 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                     .addUserOption((option) =>
                         option.setName('user')
                             .setDescription('Users nfb you want to see')
+                    )
+            )
+            .addSubcommand((subcommand) =>
+                subcommand
+                    .setName('bal')
+                    .setDescription('Show Players balance')
+                    .addUserOption((option) =>
+                        option.setName('user')
+                            .setDescription('Users BC balance you want to see')
                     )
             )
             .addSubcommand((subcommand) =>
@@ -338,6 +371,15 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                 subcommand
                     .setName('merge')
                     .setDescription('Replace a part of your nfb with another')
+                    .addStringOption((option) =>
+                        option.setName('option')
+                            .setDescription('NFB Part picker')
+                            .setRequired(true)
+                            .addChoices(
+                                { name: 'Accept', value: 'accept' },
+                                { name: 'Decline', value: 'decline' },
+                            )
+                    )
             )
             .addSubcommand((subcommand) =>
                 subcommand
@@ -362,18 +404,35 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                             .setName('amount')
                             .setDescription('Borbcoins to give')
                             .setRequired(true)
-                            .setMinValue(-10000)
+                            .setMinValue(1)
                     )
-            )/*
-            .addSubcommand((subcommand) =>
+            ).addSubcommand((subcommand) =>
                 subcommand
-                    .setName('droptable')
-                    .setDescription('Droptable')
+                    .setName('givepart')
+                    .setDescription('Give player a specific')
+                    .addUserOption((option) =>
+                        option.setName('user')
+                            .setDescription('User to give Borbcoins')
+                            .setRequired(true)
+                    )
+                    .addStringOption((option) =>
+                        option.setName('part')
+                            .setDescription('NFB Part picker')
+                            .setRequired(true)
+                            .addChoices(
+                                { name: 'Borb', value: 'Borbs' },
+                                { name: 'Background', value: 'Backgrounds' },
+                                { name: 'Frame', value: 'Frames' },
+                                { name: 'Item', value: 'Items' },
+                            )
+                    )
+                    .addIntegerOption((option) =>
+                        option
+                            .setName('index')
+                            .setDescription('Borbcoins to give')
+                            .setRequired(true)
+                            .setMinValue(0)
+                    )
             )
-            .addSubcommand((subcommand) =>
-                subcommand
-                    .setName('createtable')
-                    .setDescription('Createtable')
-            )*/
     }
 }
