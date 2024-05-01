@@ -11,8 +11,10 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
         const subGroup = interaction.options.getSubcommandGroup();
         const subcommand = interaction.options.getSubcommand();
         const FIRST_NFB_PRICE = 50;
+        const INVEST_AMOUNT = 20;
         const NFB_PRICE = 200;
         const NFB_PART_PRICE = 60;
+        const SECONDS_TO_CREATE_NFB = 10;
         const userID = interaction.user.id;
         const user = interaction.user;
 
@@ -36,7 +38,7 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
             else if (subcommand === 'bal') {
                 const userID = interaction.options.get('user') ? interaction.options.get('user').value : interaction.user.id;
                 const targetUser = interaction.options.get('user') ? await client.users.fetch(userID) : interaction.user;
-
+                console.log(Math.floor(Date.now() / 1000));
                 USERS.get_nfb_user(targetUser, (target) => {
                     {
                         return interaction.editReply(`**Current balance:** ${target.CurrentBorbcoins}`);
@@ -61,6 +63,7 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
 
                     userData.CurrentBorbcoins += amount;
                     userData.TotalBorbcoins += amount;
+                    userData.NFBsPet += 1;
 
                     USERS.update_nfb_user(userData);
 
@@ -79,13 +82,26 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                         return interaction.editReply({ content: `Not enough Borbcoins. It cost **${NFB_PRICE}** borbcoins to create a NFB. Current balance: ${userData.CurrentBorbcoins}` });
                     }
 
-                    CreateRandomNFB((images) => {
+                    let currentTime = Math.floor(Date.now() / 1000);
 
+                    // Player was to slow
+                    if (userData.nfbLink != "" && userData.lastCreate < currentTime && userData.lastCreate != -1) {
+                        userData.lastCreate = currentTime + SECONDS_TO_CREATE_NFB;
+                        USERS.update_nfb_user(userData);
+                        return interaction.editReply(
+                            {
+                                content: `You have ${SECONDS_TO_CREATE_NFB} seconds to confirm creating a new NFB by using "/nfb create" again` +
+                                    `\n**Warning** this will replace your current NFB!`
+                            });
+                    }
+
+                    CreateRandomNFB((images) => {
                         if (!images) return interaction.editReply({ content: `Couldn't make a new nfb`, ephemeral: false });
                         let oldNfb = userData.parts != null ? { "id": GetPartsInfo(userData.parts)[1], "currentOwner": "" } : null;
 
                         CombineImages(images, async (tempFile) => {
                             // Maybe send this in a hidden channel and reply with the link to the image
+
                             replyMessage = await interaction.editReply({
                                 files: [{
                                     attachment: tempFile,
@@ -99,6 +115,8 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                             userData.CurrentBorbcoins -= userData.nfbLink == "" ? FIRST_NFB_PRICE : NFB_PRICE;
                             userData.nfbLink = imageUrl;
                             userData.parts = images[2];
+                            userData.NFBsCreated += 1;
+                            userData.lastCreate = -1;
                             USERS.update_nfb_user(userData);
                             USERS.update_nfbs({ "id": images[1], "nfbLink": imageUrl, "currentOwner": user.id, "timesCreated": images[3].timesCreated + 1 }, oldNfb);
                         });
@@ -180,6 +198,9 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
             else if (subcommand === 'buy') {
                 USERS.get_nfb_user(user, (userData) => {
                     const partString = interaction.options.get('part').value
+
+                    if (userData.tempPart) return interaction.editReply(`You already have a part. Pls accept or decline that before buying a new part`);
+
                     if (userData.CurrentBorbcoins < NFB_PART_PRICE)
                         return interaction.editReply({ content: `Not enough Borbcoins. Cost **${NFB_PART_PRICE}** borbscoins. **Current balance:** ${userData.CurrentBorbcoins}.`, ephemeral: false });
                     const part = GetRandomPart(partString)
@@ -194,8 +215,23 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                     });
                     userData.tempPart = {
                         "name": part[1],
-                        "partType": [partString],
+                        "partType": partString,
                     }
+
+                    USERS.update_nfb_user(userData)
+                });
+            }
+
+            else if (subcommand === 'invest') {
+                USERS.get_nfb_user(user, (userData) => {
+                    if (userData.nfbLink == "")
+                        return interaction.editReply(`You need a NFB before you start investing!`);
+                    if (userData.CurrentBorbcoins < INVEST_AMOUNT)
+                        return interaction.editReply({ content: `Not enough Borbcoins. You need **${INVEST_AMOUNT}** borbscoins to invest. **Current balance:** ${userData.CurrentBorbcoins}.`, ephemeral: false });
+
+                    userData.CurrentBorbcoins -= INVEST_AMOUNT;
+
+                    USERS.update_parts(userData, INVEST_AMOUNT);
                     USERS.update_nfb_user(userData)
                 });
             }
@@ -212,24 +248,29 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                             content: `No info found!`
                         });
 
-                        var firstDate = new Date(_nfb.firstCreated);
-                        var lastDate = new Date(_nfb.lastCreated);
+                        USERS.get_nfb_value(userData, (nfbValue) => {
+                            var firstDate = new Date(_nfb.firstCreated);
+                            var lastDate = new Date(_nfb.lastCreated);
 
-                        var info;
-                        if (firstDate.getTime() == lastDate.getTime()) {
-                            info = `**Created:** ${firstDate.toLocaleDateString("en-GB")} ${firstDate.toLocaleTimeString("en-US")}`
-                        }
-                        else {
-                            info = `**First created:** ${firstDate.toLocaleDateString("en-GB")} ${firstDate.toLocaleTimeString("en-US")}` +
-                                `\n**Last created:** ${lastDate.toLocaleDateString("en-GB")} ${lastDate.toLocaleTimeString("en-US")}`;
-                        }
+                            var info = ``;
+                            if (nfbValue) {
+                                info += `**NFB value:** ${nfbValue}\n`
+                            }
+                            if (firstDate.getTime() == lastDate.getTime()) {
+                                info += `**Created:** ${firstDate.toLocaleDateString("en-GB")} ${firstDate.toLocaleTimeString("en-US")}\n`
+                            }
+                            else {
+                                info += `**First created:** ${firstDate.toLocaleDateString("en-GB")} ${firstDate.toLocaleTimeString("en-US")}\n` +
+                                    `**Last created:** ${lastDate.toLocaleDateString("en-GB")} ${lastDate.toLocaleTimeString("en-US")}\n`;
+                            }
 
-                        info += `**\nTimes created:** ${_nfb.timesCreated}`
+                            info += `**Times created:** ${_nfb.timesCreated}\n`
 
-                        replyMessage = interaction.editReply({
-                            content: _nfb.nfbLink
+                            replyMessage = interaction.editReply({
+                                content: _nfb.nfbLink
+                            });
+                            return interaction.channel.send(`**Current owner: **${targetUser.username}\n${info}`);
                         });
-                        return interaction.channel.send(`**Current owner: **${targetUser.username}\n${info}`);
                     });
                 });
             }
@@ -242,11 +283,18 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                         return interaction.editReply({ content: `You need to buy a part first with /nfb buy` });
 
                     const option = interaction.options.get('option').value
-                    
-                    if (option == "decline") {
 
-                        // Update NFB PRIME
-                        return
+                    if (option == "decline") {
+                        var tempPart = userData.tempPart.name;
+
+                        userData.tempPart = null;
+
+                        USERS.update_nfb_user(userData);
+
+                        // ---------------- \\
+                        // Update NFB PRIME \\
+                        // ---------------- \\
+                        return interaction.editReply(`You have declined **${tempPart}**!`)
                     }
 
                     // Get name of current NFB
@@ -259,6 +307,7 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
 
                     // Get info about nfb
                     let images = GetPartsInfo(parts)
+                    //console.log(images);
 
                     USERS.get_nfb(images[1], (newNfb) => {
                         if (!newNfb) return interaction.editReply({ content: `This nfb already exist`, ephemeral: false });
@@ -270,6 +319,7 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                             // ------------------------------------------------------------------------- \\
                             // ------------------------------------------------------------------------- \\
 
+                            console.log(images);
                             let replyMessage = await interaction.editReply({
                                 content: `Part merged`,
                                 files: [{
@@ -367,7 +417,13 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                                 { name: 'Frame', value: 'Frames' },
                                 { name: 'Item', value: 'Items' },
                             ))
-            ).addSubcommand((subcommand) =>
+            )
+            .addSubcommand((subcommand) =>
+                subcommand
+                    .setName('invest')
+                    .setDescription('Invest borbcoins into your nfb.')
+            )
+            .addSubcommand((subcommand) =>
                 subcommand
                     .setName('merge')
                     .setDescription('Replace a part of your nfb with another')

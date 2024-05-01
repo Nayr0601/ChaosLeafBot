@@ -8,7 +8,7 @@ module.exports = {
 
     init_globals() {
         console.log("--- init globals ---");
-
+        global.IMAGEFOLDERS = ['Backgrounds', 'Borbs', 'Frames', 'Items'];
         global.IMAGES = GetImages();
         global.DB = setup_db();
         global.USERS = require("./utils/users.js");

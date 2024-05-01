@@ -112,7 +112,7 @@ module.exports = {
             sql_fields.push(`${key} = :${key}`);
         }
 
-        var sql = `UPDATE nfbs SET ${sql_fields.join(", ")}  WHERE ID = "${_nfb.id}"`;
+        var sql = `UPDATE nfbs SET ${sql_fields.join(", ")} WHERE ID = "${_nfb.id}"`;
         var sql_post = _nfb;
 
         DB.query(sql, sql_post, function (err, result) {
@@ -146,8 +146,8 @@ module.exports = {
         });
     },
 
-    get_part(_part, _cb) {
-        var sql = `SELECT * FROM Parts WHERE ID = "${_part.name}" AND PartType = "${_part.type}"`;
+    get_part(_partId, _partType, _cb) {
+        var sql = `SELECT * FROM Parts WHERE ID = "${_partId}" AND PartType = "${_partType}"`;
 
         DB.query(sql, function (err, result) {
             if (err) {
@@ -156,7 +156,6 @@ module.exports = {
             }
 
             if (!result || result.length === 0) {
-
                 return false;
             }
 
@@ -165,19 +164,56 @@ module.exports = {
     },
 
 
-
-    update_part(_part) {
+    get_nfb_value(_userData, _cb) {
         var sql_fields = []
+        for (const [key, value] of Object.entries(_userData.parts)) {
+            console.log(`${key}: ${value}`);
+            sql_fields.push(`(ID = "${value}" AND PartType = "${key}")`);
+        }
+        sql_post = _userData.parts;
 
-        var sql = `UPDATE Parts SET pValue = ${_part.pValue} WHERE ID = "${_part.id}" and PartType = "${_part.PartType}"`;
+        var sql = `SELECT SUM(pValue) FROM Parts WHERE ${sql_fields.join(" OR ")}`;
 
         DB.query(sql, function (err, result) {
             if (err) {
-                //console.log(err)
+                console.log(err);
                 return false;
             }
 
+            if (!result || result.length === 0) {
+                return false;
+            }
+
+            console.log("Value: " + result[0][Object.keys(result[0])[0]]);
+            return _cb(result[0][Object.keys(result[0])[0]]);
+        });
+    },
+
+
+    update_part(_part) {
+        var sql = `UPDATE Parts SET pValue = ${_part.pValue} WHERE ID = "${_part.ID}" AND PartType = "${_part.PartType}"`;
+        console.log(_part);
+        DB.query(sql, function (err, result) {
+            if (err) {
+                console.log(err)
+                return false;
+            }
             if (!result || result.length) return false;
         });
     },
+
+    update_parts(_user, _fullInvestment) {
+        var investmentPerPart = _fullInvestment / 4;
+        console.log("UPDATING PARTS")
+        for (var i = 0; i < IMAGEFOLDERS.length; i++) {
+            var partType = IMAGEFOLDERS[i]
+            USERS.get_part(_user.parts[partType], partType, (part) => {
+
+                part.pValue += investmentPerPart;
+                USERS.update_part(part);
+            })
+
+        }
+
+    }
 }

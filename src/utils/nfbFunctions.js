@@ -1,13 +1,12 @@
 const fs = require('fs');
 const Jimp = require("jimp");
-const folders = ['Backgrounds', 'Borbs', 'Frames', 'Items'];
 const image_directory = './src/Bits/';
 const splitSymbol = "_";
 
 
 function AddPartsToDB() {
-    for (var i = 0; i < folders.length; i++) {
-        var partType = folders[i]
+    for (var i = 0; i < IMAGEFOLDERS.length; i++) {
+        var partType = IMAGEFOLDERS[i]
         for (var j = 0; j < IMAGES[partType].length; j++) {
             USERS.add_part(IMAGES[partType][j], partType);
         }
@@ -19,9 +18,9 @@ function AddPartsToDB() {
 function GetImages() {
     let files = {};
 
-    for (var i = 0; i < folders.length; i++) {
+    for (var i = 0; i < IMAGEFOLDERS.length; i++) {
 
-        files[folders[i]] = fs.readdirSync(image_directory + folders[i] + "/").map(file => {
+        files[IMAGEFOLDERS[i]] = fs.readdirSync(image_directory + IMAGEFOLDERS[i] + "/").map(file => {
             if (!file.endsWith(".png")) console.log(file);
             file = file.split(".")[0]
             return file;
@@ -42,15 +41,15 @@ async function CreateRandomNFB(_cb, tries = 0) {
     let imageName = ""
     let parts = {};
 
-    for (var i = 0; i < folders.length; i++) {
+    for (var i = 0; i < IMAGEFOLDERS.length; i++) {
         if (rates[i] === 100 || getRndInteger(0, 100) <= rates[i]) {
-            let frameImage = GetRandomPart(folders[i]);
+            let frameImage = GetRandomPart(IMAGEFOLDERS[i]);
             imagePaths.push(frameImage[0]);
             imageName += ((i === 0) ? "" : splitSymbol) + frameImage[1];
-            parts[folders[i]] = frameImage[1];
+            parts[IMAGEFOLDERS[i]] = frameImage[1];
         }
         else {
-            parts[folders[i]] = "";
+            parts[IMAGEFOLDERS[i]] = "";
         }
     }
 
@@ -75,6 +74,7 @@ async function CombineImages(images, _cb) {
         jimps.push(Jimp.read(images[0][i]))
     }
 
+    
     //creates a promise to handle the jimps
     Promise.all(jimps).then(async function (data) {
         // --- COMBINE NFB PARTS --- \\
@@ -94,11 +94,11 @@ async function CombineImages(images, _cb) {
 function GetPartsInfo(parts) {
     let imagePaths = []
     let imageName = ""
-    for (var i = 0; i < folders.length; i++) {
-        if (parts[folders[i]] === "") continue;
-        let path = image_directory + folders[i] + "/" + parts[folders[i]] + ".png";
+    for (var i = 0; i < IMAGEFOLDERS.length; i++) {
+        if (parts[IMAGEFOLDERS[i]] === "") continue;
+        let path = image_directory + IMAGEFOLDERS[i] + "/" + parts[IMAGEFOLDERS[i]] + ".png";
         imagePaths.push(path);
-        imageName += ((i === 0) ? "" : splitSymbol) + parts[folders[i]];
+        imageName += ((i === 0) ? "" : splitSymbol) + parts[IMAGEFOLDERS[i]];
     }
 
     return [imagePaths, imageName, parts];
@@ -107,7 +107,7 @@ function GetPartsInfo(parts) {
 
 function GetRandomPart(part) {
     let borbImage = IMAGES[part][getRndInteger(0, IMAGES[part].length)]
-    let imagePath = image_directory + part + "/" + borbImage
+    let imagePath = image_directory + part + "/" + borbImage + ".png"
     let imageName = borbImage;
 
     return [imagePath, imageName];
@@ -116,7 +116,7 @@ function GetRandomPart(part) {
 function GetPart(part, index) {
     if (IMAGES[part].length <= index) return false;
     let borbImage = IMAGES[part][index]
-    let imagePath = image_directory + part + "/" + borbImage
+    let imagePath = image_directory + part + "/" + borbImage + ".png"
     let imageName = borbImage;
 
     return [imagePath, imageName];
