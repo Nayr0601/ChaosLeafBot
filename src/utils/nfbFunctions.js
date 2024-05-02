@@ -53,12 +53,12 @@ async function CreateRandomNFB(_cb, tries = 0) {
         }
     }
 
-    await USERS.get_nfb(imageName, (newNfb) => {  
+    await USERS.get_nfb(imageName, (newNfb) => {
         if (tries >= 20) {
             console.log("No NFB could be created!");
             return _cb(null);
         }
-        
+
         if (newNfb.currentOwner != "" && newNfb.currentOwner != null) {
             CreateRandomNFB(_cb, tries + 1);
         }
@@ -74,7 +74,7 @@ async function CombineImages(images, _cb) {
         jimps.push(Jimp.read(images[0][i]))
     }
 
-    
+
     //creates a promise to handle the jimps
     Promise.all(jimps).then(async function (data) {
         // --- COMBINE NFB PARTS --- \\
@@ -89,6 +89,28 @@ async function CombineImages(images, _cb) {
 
         fs.promises.unlink(tempFile);
     });
+}
+
+async function SendImageAndGetImageLink(fileName, file, interaction) {
+
+    // ------------------------------------------------------------------------- \\
+    // ------------------------------------------------------------------------- \\
+    // Maybe send image in a hidden channel and reply with the link to the image \\
+    // ------------------------------------------------------------------------- \\
+    // ------------------------------------------------------------------------- \\
+
+    let replyMessage = await interaction.editReply({
+        content: `Part merged`,
+        files: [{
+            attachment: file,
+            name: fileName + '.png',
+        }],
+    });
+
+    // Get the link to the image send above
+    let imageUrl = replyMessage.attachments.first().url;
+
+    return imageUrl;
 }
 
 function GetPartsInfo(parts) {
@@ -133,5 +155,6 @@ module.exports = {
     GetPart,
     CombineImages,
     GetPartsInfo,
-    getRndInteger
+    getRndInteger,
+    SendImageAndGetImageLink,
 }

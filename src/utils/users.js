@@ -167,7 +167,7 @@ module.exports = {
     get_nfb_value(_userData, _cb) {
         var sql_fields = []
         for (const [key, value] of Object.entries(_userData.parts)) {
-            console.log(`${key}: ${value}`);
+            //console.log(`${key}: ${value}`);
             sql_fields.push(`(ID = "${value}" AND PartType = "${key}")`);
         }
         sql_post = _userData.parts;
@@ -184,7 +184,7 @@ module.exports = {
                 return false;
             }
 
-            console.log("Value: " + result[0][Object.keys(result[0])[0]]);
+            //console.log("Value: " + result[0][Object.keys(result[0])[0]]);
             return _cb(result[0][Object.keys(result[0])[0]]);
         });
     },
