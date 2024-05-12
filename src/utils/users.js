@@ -30,8 +30,44 @@ module.exports = {
         });
     },
 
+    // Work in progress. Getting both user data and nfb with one call. 
+    get_nfb_user_with_nfb(_user, _cb) {
+        var sql = `SELECT * FROM users LEFT JOIN nfbs ON users.ID = nfbs.currentOwner`;
+
+        DB.query(sql, function (err, result) {
+            if (err) {
+                console.log(err);
+                return false;
+            }
+
+            if (!result || result.length === 0) {
+                // add user to db
+                console.log(`User with id ${_user.id} not found. Creating user`);
+                USERS.register_nfb_user(_user, (res) => {
+
+                    if (!res) return false;
+
+                    USERS.get_nfb_user_with_nfb(_user, _cb);
+                });
+                return;
+            }
+
+            var user = result[0]
+
+            if (user.parts !== null) user.parts = JSON.parse(user.parts);
+            if (user.tempPart !== null) user.tempPart = JSON.parse(user.tempPart);
+
+            return _cb(user);
+        });
+    },
+
     update_nfb_user(_user) {
         var sql_fields = [];
+
+        delete _user.currentOwner;
+        delete _user.firstCreated;
+        delete _user.lastCreated;
+        delete _user.timesCreated;
 
         if (_user.parts !== null) _user.parts = JSON.stringify(_user.parts);
         if (_user.tempPart !== null) _user.tempPart = JSON.stringify(_user.tempPart);
@@ -68,7 +104,7 @@ module.exports = {
     },
 
     add_nfb(_nfb, _cb) {
-        var sql = `INSERT INTO nfbs (ID) VALUES ("${_nfb}")`;
+        var sql = `INSERT INTO nfbs (nfbID) VALUES ("${_nfb}")`;
 
         DB.query(sql, function (err, result) {
             if (err) {
@@ -83,7 +119,7 @@ module.exports = {
     },
 
     async get_nfb(_nfb, _cb) {
-        var sql = `SELECT * FROM nfbs WHERE ID = "${_nfb}"`;
+        var sql = `SELECT * FROM nfbs WHERE nfbID = "${_nfb}"`;
 
         DB.query(sql, function (err, result) {
             if (err) {
@@ -107,19 +143,22 @@ module.exports = {
 
     update_nfb(_nfb) {
         var sql_fields = []
+        console.log(`UPDATING NFB!`)
+        console.log(_nfb)
         for (const [key, value] of Object.entries(_nfb)) {
-            //console.log(`${key}: ${value}`);
+            console.log(`Key value pair = ${key}: ${value}`);
             sql_fields.push(`${key} = :${key}`);
         }
 
-        var sql = `UPDATE nfbs SET ${sql_fields.join(", ")} WHERE ID = "${_nfb.id}"`;
+        var sql = `UPDATE nfbs SET ${sql_fields.join(", ")} WHERE nfbID = "${_nfb.nfbID}"`;
         var sql_post = _nfb;
 
         DB.query(sql, sql_post, function (err, result) {
             if (err) {
-                //console.log(err)
+                console.log(err)
                 return false;
             }
+
 
             if (!result || result.length) return false;
         });

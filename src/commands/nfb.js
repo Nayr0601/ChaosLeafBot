@@ -1,7 +1,5 @@
 const BaseSlashCommand = require('../utils/BaseSlashCommand')
 const { SlashCommandBuilder } = require('discord.js');
-const { CreateRandomNFB, getRndInteger, GetPartsInfo, GetRandomPart, GetPart, CombineImages, SendImageAndGetImageLink } = require('../utils/nfbFunctions');
-
 
 module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
     constructor() {
@@ -27,11 +25,9 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                 return NFBCMDFUNC.bal(client, interaction);
             }
 
-
             else if (subcommand === 'pet') {
                 return NFBCMDFUNC.pet(client, interaction);
             }
-
 
             else if (subcommand === 'create') {
                 NFBCMDFUNC.create(client, interaction);
@@ -60,6 +56,7 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
             else if (subcommand === 'info') {
                 NFBCMDFUNC.info(client, interaction);
             }
+            
             else if (subcommand === 'merge') {
                 NFBCMDFUNC.merge(client, interaction);
             }
@@ -97,6 +94,14 @@ module.exports = class AddChaosLeavesCommand extends BaseSlashCommand {
                 subcommand
                     .setName('create')
                     .setDescription('Create NFB')
+                    .addStringOption((option) =>
+                    option.setName('option')
+                        .setDescription('Accept/decline created nfb')
+                        .addChoices(
+                            { name: 'Accept', value: 'accept' },
+                            { name: 'Decline', value: 'decline' },
+                        )
+                )
             )
             .addSubcommand((subcommand) =>
                 subcommand

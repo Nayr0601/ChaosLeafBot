@@ -15,7 +15,7 @@ module.exports = {
         global.USERS = require("./utils/users.js");
 
 
-        // NFB Prices
+        // NFB Variables
         global.FIRST_NFB_PRICE = 50;
         global.INVEST_AMOUNT = 20;
         global.NFB_PRICE = 200;

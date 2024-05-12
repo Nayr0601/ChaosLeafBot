@@ -1,4 +1,3 @@
-const { CreateRandomNFB, getRndInteger, GetPartsInfo, GetPart, CombineImages, SendImageAndGetImageLink } = require('./nfbFunctions');
 module.exports = {
     // --------------------------------------- \\
     //              Bal function               \\
@@ -7,7 +6,11 @@ module.exports = {
     async bal(client, interaction) {
         const userID = interaction.options.get('user') ? interaction.options.get('user').value : interaction.user.id;
         const targetUser = interaction.options.get('user') ? await client.users.fetch(userID) : interaction.user;
-        console.log(Math.floor(Date.now() / 1000));
+
+        USERS.get_nfb_user_with_nfb(targetUser, (target) => {
+            console.log(target);
+        })
+
         USERS.get_nfb_user(targetUser, (target) => {
             {
                 return interaction.editReply(`**Current balance:** ${target.CurrentBorbcoins}`);
@@ -51,21 +54,54 @@ module.exports = {
     //            Create function              \\
     //            Create a new nfb             \\
     // --------------------------------------- \\
-
     async create(client, interaction) {
         var user = interaction.user;
-        USERS.get_nfb_user(user, async (userData) => {
+        const accepted = interaction.options.get('option') ? interaction.options.get('option') : null;
+        USERS.get_nfb_user_with_nfb(user, async (userData) => {
+            // First time creating a nfb
             if (userData.nfbLink == "" && userData.CurrentBorbcoins < FIRST_NFB_PRICE) {
                 return interaction.editReply({ content: `Not enough Borbcoins. Your first NFB cost **${FIRST_NFB_PRICE}** borbcoins. Current balance: ${userData.CurrentBorbcoins}` });
             }
 
+            // Already have a nfb, but not enough borbcoins
             if (userData.CurrentBorbcoins < NFB_PRICE) {
                 return interaction.editReply({ content: `Not enough Borbcoins. It cost **${NFB_PRICE}** borbcoins to create a NFB. Current balance: ${userData.CurrentBorbcoins}` });
             }
 
-            let currentTime = Math.floor(Date.now() / 1000);
+            // User have already created a temp nfb 
+            if (userData.tempNfbID) {
+                // User haven't given a second argument
+                if (accepted == null) {
+                    return interaction.editReply({ content: `You already have a nfb. Please decide if you want to keep it or by adding accept or decline after this command.` });
+                } 
 
-            // Player was to slow
+                // User have accepted the
+                else if (accepted == 'accept') {
+                    var oldNfbID = userData.nfbID;
+                    userData.nfbID = userData.tempNfbID;
+                    userData.tempNfbID = null;
+
+                    // Update part values
+                    
+
+                    // Update nfbs
+                    await USERS.update_nfbs({ "nfbID": images[1], "nfbLink": imageUrl, "currentOwner": user.id, "timesCreated": images[3].timesCreated + 1 }, oldNfb);
+                    USERS.update_nfb_user(userData);
+                    
+                    return interaction.editReply({ content: `Nfb Updated` });
+                }
+                else if (accepted == 'decline') {
+                    userData.tempNfbID = null;
+
+                    // Add borb coins to the nfb PRIME
+
+                    USERS.update_nfb_user(userData);
+                }
+            }
+
+            /*let currentTime = Math.floor(Date.now() / 1000);
+
+            // Player already have an nfb and use create for the first time or isn't fast enough
             if (userData.nfbLink != "" && userData.lastCreate < currentTime && userData.lastCreate != -1) {
                 userData.lastCreate = currentTime + SECONDS_TO_CREATE_NFB;
                 USERS.update_nfb_user(userData);
@@ -74,13 +110,15 @@ module.exports = {
                         content: `You have ${SECONDS_TO_CREATE_NFB} seconds to confirm creating a new NFB by using "/nfb create" again` +
                             `\n**Warning** this will replace your current NFB!`
                     });
-            }
+            }*/
 
-            CreateRandomNFB((images) => {
+
+
+            NFBHELPERFUNC.CreateRandomNFB((images) => {
                 if (!images) return interaction.editReply({ content: `Couldn't make a new nfb`, ephemeral: false });
-                let oldNfb = userData.parts != null ? { "id": GetPartsInfo(userData.parts)[1], "currentOwner": "" } : null;
+                let oldNfb = userData.parts != null ? { "nfbID": NFBHELPERFUNC.GetPartsInfo(userData.parts)[1], "currentOwner": "" } : null;
 
-                CombineImages(images, async (tempFile) => {
+                NFBHELPERFUNC.CombineImages(images, async (tempFile) => {
                     // Maybe send this in a hidden channel and reply with the link to the image
 
                     replyMessage = await interaction.editReply({
@@ -93,13 +131,15 @@ module.exports = {
                     // Get the link to the image send above
                     let imageUrl = replyMessage.attachments.first().url;
 
+                    await USERS.update_nfbs({ "nfbID": images[1], "nfbLink": imageUrl, "currentOwner": user.id, "timesCreated": images[3].timesCreated + 1 }, oldNfb);
+                    
                     userData.CurrentBorbcoins -= userData.nfbLink == "" ? FIRST_NFB_PRICE : NFB_PRICE;
                     userData.nfbLink = imageUrl;
+                    userData.nfbID = images[1];
                     userData.parts = images[2];
                     userData.NFBsCreated += 1;
-                    userData.lastCreate = -1;
+                    userData.lastCreateCmd = -1;
                     USERS.update_nfb_user(userData);
-                    USERS.update_nfbs({ "id": images[1], "nfbLink": imageUrl, "currentOwner": user.id, "timesCreated": images[3].timesCreated + 1 }, oldNfb);
                 });
             });
         })
@@ -137,7 +177,7 @@ module.exports = {
         const targetUser = await client.users.fetch(userID)
 
         USERS.get_nfb_user(targetUser, (userData) => {
-            const part = GetPart(partString, index)
+            const part = NFBHELPERFUNC.GetPart(partString, index)
 
             if (!part) return interaction.editReply(`Flokc have been lazy, we don't have ${index} different ${partString} :P`)
             replyMessage = interaction.editReply({
@@ -164,7 +204,7 @@ module.exports = {
         const targetUser = interaction.options.get('user') ? await client.users.fetch(userID) : interaction.user;
 
         USERS.get_nfb_user(targetUser, (userData) => {
-            var nfbId = GetPartsInfo(userData.parts)[1];
+            var nfbId = NFBHELPERFUNC.GetPartsInfo(userData.parts)[1];
 
             USERS.get_nfb(nfbId, (_nfb) => {
                 if (!_nfb) return interaction.editReply({
@@ -222,7 +262,7 @@ module.exports = {
     // --------------------------------------- \\
     async merge(client, interaction) {
         var user = interaction.user;
-        USERS.get_nfb_user(user, (userData) => {
+        USERS.get_nfb_user_with_nfb(user, (userData) => {
             if (userData.nfbLink === "")
                 return interaction.editReply({ content: `You need to create a nfb first.` });
 
@@ -245,20 +285,20 @@ module.exports = {
             }
 
             // Get name of current NFB
-            var oldNfbName = GetPartsInfo(userData.parts)[1];
+            var oldNfbName = NFBHELPERFUNC.GetPartsInfo(userData.parts)[1];
             let parts = userData.parts
 
             // Replace part of NFB with temppart.
             parts[userData.tempPart.partType] = userData.tempPart.name;
 
             // Get info about nfb
-            let images = GetPartsInfo(parts)
+            let images = NFBHELPERFUNC.GetPartsInfo(parts)
 
             // Create NFB based on new parts
             USERS.get_nfb(images[1], (newNfb) => {
                 if (!newNfb) return interaction.editReply({ content: `This nfb already exist`, ephemeral: false });
-                CombineImages(images, async (tempFile) => {
-                    var imageUrl = await SendImageAndGetImageLink(images[1], tempFile, interaction)
+                NFBHELPERFUNC.CombineImages(images, async (tempFile) => {
+                    var imageUrl = await NFBHELPERFUNC.SendImageAndGetImageLink(images[1], tempFile, interaction)
 
                     //userData.CurrentBorbcoins -= NFB_PRICE;
                     userData.nfbLink = imageUrl;
@@ -279,7 +319,7 @@ module.exports = {
     async pet(client, interaction) {
         user = interaction.user;
         USERS.get_nfb_user(user, (userData) => {
-            let amount = getRndInteger(10, 25);
+            let amount = NFBHELPERFUNC.getRndInteger(10, 25);
             let responseMessage;
 
             if (!userData.nfbLink) {

@@ -1,0 +1,5 @@
+Move everything nfb related from the user table to the nfb table
+
+Get NFB Prime working (still need to figure out how best to store this in the db) docs linked in dc have some info about nfb Prime
+
+
