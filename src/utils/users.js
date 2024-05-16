@@ -1,9 +1,12 @@
 const mysql = require('mysql');
 module.exports = {
     get_nfb_user(_user, _cb) {
-        var sql = `SELECT * FROM users WHERE ID = "${_user.id}"`;
+        var sql = `SELECT * FROM users WHERE ID = :ID`;
+        var sql_post = {
+            ID: _user.id
+        }
 
-        DB.query(sql, function (err, result) {
+        DB.query(sql, sql_post, function (err, result) {
             if (err) {
                 console.log(err);
                 return false;
@@ -32,9 +35,11 @@ module.exports = {
 
     // Work in progress. Getting both user data and nfb with one call. 
     get_nfb_user_with_nfb(_user, _cb) {
-        var sql = `SELECT * FROM users LEFT JOIN nfbs ON users.ID = nfbs.currentOwner`;
-
-        DB.query(sql, function (err, result) {
+        var sql = `SELECT * FROM users LEFT JOIN nfbs ON users.ID = nfbs.currentOwner where ID = :ID`;
+        var sql_post = {
+            ID: _user.id
+        }
+        DB.query(sql, sql_post, function (err, result) {
             if (err) {
                 console.log(err);
                 return false;
@@ -77,7 +82,10 @@ module.exports = {
             sql_fields.push(`${key} = :${key}`);
         }
 
-        var sql = `UPDATE users SET ${sql_fields.join(", ")} WHERE ID = "${_user.ID}"`;
+        var sql = `UPDATE users SET ${sql_fields.join(", ")} WHERE ID = :ID`;
+        var sql_post = {
+            ID: _user.ID
+        }
         var query_fields = _user;
         DB.query(sql, query_fields, function (err, result) {
             if (err) {
@@ -89,9 +97,11 @@ module.exports = {
     },
 
     register_nfb_user(_user, _cb) {
-        var sql = `INSERT INTO users (ID) VALUES ("${_user.id}")`;
-
-        DB.query(sql, function (err, result) {
+        var sql = `INSERT INTO users (ID) VALUES (:ID)`;
+        var sql_post = {
+            ID: _user.ID
+        }
+        DB.query(sql, sql_post, function (err, result) {
             if (err) {
                 //console.log(err)
                 return false;
@@ -104,9 +114,11 @@ module.exports = {
     },
 
     add_nfb(_nfb, _cb) {
-        var sql = `INSERT INTO nfbs (nfbID) VALUES ("${_nfb}")`;
-
-        DB.query(sql, function (err, result) {
+        var sql = `INSERT INTO nfbs (nfbID) VALUES (:nfbID)`;
+        var sql_post = {
+            nfbID: _nfb
+        }
+        DB.query(sql, sql_post, function (err, result) {
             if (err) {
                 //console.log(err)
                 return false;
@@ -119,9 +131,11 @@ module.exports = {
     },
 
     async get_nfb(_nfb, _cb) {
-        var sql = `SELECT * FROM nfbs WHERE nfbID = "${_nfb}"`;
-
-        DB.query(sql, function (err, result) {
+        var sql = `SELECT * FROM nfbs WHERE nfbID = :nfbID`;
+        var sql_post = {
+            nfbID: _nfb
+        }
+        DB.query(sql, sql_post, function (err, result) {
             if (err) {
                 console.log(err);
                 return false;
@@ -150,7 +164,7 @@ module.exports = {
             sql_fields.push(`${key} = :${key}`);
         }
 
-        var sql = `UPDATE nfbs SET ${sql_fields.join(", ")} WHERE nfbID = "${_nfb.nfbID}"`;
+        var sql = `UPDATE nfbs SET ${sql_fields.join(", ")} WHERE nfbID = :nfbID`;
         var sql_post = _nfb;
 
         DB.query(sql, sql_post, function (err, result) {
@@ -171,9 +185,12 @@ module.exports = {
 
     // PART VALUE
     add_part(_name, _partType) {
-        var sql = `INSERT INTO Parts (ID, PartType) VALUES ("${_name}", "${_partType}")`;
-
-        DB.query(sql, function (err, result) {
+        var sql = `INSERT INTO Parts (ID, PartType) VALUES (:name, :partType)`;
+        var sql_post = {
+            name: _name,
+            partType: _partType,
+        }
+        DB.query(sql, sql_post, function (err, result) {
             if (err) {
                 //console.log(err)
                 return false;
@@ -186,9 +203,13 @@ module.exports = {
     },
 
     get_part(_partId, _partType, _cb) {
-        var sql = `SELECT * FROM Parts WHERE ID = "${_partId}" AND PartType = "${_partType}"`;
+        var sql = `SELECT * FROM Parts WHERE ID = partID AND PartType = :partType`;
+        var sql_post = {
+            partID: _partId,
+            partType: _partType,
+        }
 
-        DB.query(sql, function (err, result) {
+        DB.query(sql, sql_post, function (err, result) {
             if (err) {
                 console.log(err);
                 return false;
@@ -230,9 +251,10 @@ module.exports = {
 
 
     update_part(_part) {
-        var sql = `UPDATE Parts SET pValue = ${_part.pValue} WHERE ID = "${_part.ID}" AND PartType = "${_part.PartType}"`;
+        var sql = `UPDATE Parts SET pValue = :pValue WHERE ID = :ID AND PartType = :PartType}`;
+        var sql_post = _part
         console.log(_part);
-        DB.query(sql, function (err, result) {
+        DB.query(sql, sql_post, function (err, result) {
             if (err) {
                 console.log(err)
                 return false;
