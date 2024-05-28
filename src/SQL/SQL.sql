@@ -23,8 +23,6 @@ CREATE TABLE users (
     ID varchar(32) NOT NULL, 
     nfbID varchar(255),
     tempNfbID varchar(255),
-    nfbLink varchar(500) DEFAULT "", 
-    parts JSON,
     tempPart JSON, 
     CurrentBorbcoins int DEFAULT 0, 
     TotalBorbcoins  int DEFAULT 0,

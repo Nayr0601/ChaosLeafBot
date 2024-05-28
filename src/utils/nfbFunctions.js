@@ -56,7 +56,7 @@ async function CreateRandomNFB(_cb, tries = 0) {
         }
     }
 
-    await USERS.get_nfb(imageName, (newNfb) => {
+    await USERS.get_nfb({ id: imageName, parts: parts }, (newNfb) => {
         if (tries >= 20) {
             console.log("No NFB could be created!");
             return _cb(null);
