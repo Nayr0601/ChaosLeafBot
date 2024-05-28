@@ -159,8 +159,7 @@ module.exports = {
 
     update_nfb(_nfb) {
         var sql_fields = []
-        console.log(`UPDATING NFB!`)
-        console.log(_nfb)
+        //console.log("Updating NFB!")
         for (const [key, value] of Object.entries(_nfb)) {
             //console.log(`Key value pair = ${key}: ${value}`);
             sql_fields.push(`${key} = :${key}`);
@@ -207,7 +206,7 @@ module.exports = {
     },
 
     get_part(_partId, _partType, _cb) {
-        var sql = `SELECT * FROM Parts WHERE ID = partID AND PartType = :partType`;
+        var sql = `SELECT * FROM Parts WHERE ID = :partID AND PartType = :partType`;
         var sql_post = {
             partID: _partId,
             partType: _partType,
@@ -255,9 +254,8 @@ module.exports = {
 
 
     update_part(_part) {
-        var sql = `UPDATE Parts SET pValue = :pValue WHERE ID = :ID AND PartType = :PartType}`;
+        var sql = `UPDATE Parts SET pValue = :pValue WHERE ID = :ID AND PartType = :PartType`;
         var sql_post = _part
-        console.log(_part);
         DB.query(sql, sql_post, function (err, result) {
             if (err) {
                 console.log(err)
@@ -267,18 +265,21 @@ module.exports = {
         });
     },
 
+    update_part_value(_id, _partType, _valueIncrease) {
+        USERS.get_part(_id, _partType, (part) => {
+            part.pValue += _valueIncrease;
+            USERS.update_part(part);
+        })
+    },
+
     update_parts(_user, _fullInvestment) {
         var investmentPerPart = _fullInvestment / 4;
-        console.log("UPDATING PARTS")
+        //console.log("UPDATING PARTS")
+        console.log(_user.parts)
         for (var i = 0; i < IMAGEFOLDERS.length; i++) {
             var partType = IMAGEFOLDERS[i]
-            USERS.get_part(_user.parts[partType], partType, (part) => {
 
-                part.pValue += investmentPerPart;
-                USERS.update_part(part);
-            })
-
+            USERS.update_part_value(_user.parts[partType], partType, investmentPerPart);
         }
-
-    }
+    },
 }

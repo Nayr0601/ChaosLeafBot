@@ -55,6 +55,7 @@ module.exports = {
         const accepted = interaction.options.get('option') ? interaction.options.get('option').value : null;
 
         USERS.get_nfb_user_with_nfb(user, async (userData) => {
+
             // First time creating a nfb
             if (userData.nfbID == null && userData.CurrentBorbcoins < FIRST_NFB_PRICE) {
                 return interaction.editReply({ content: `Not enough Borbcoins. Your first NFB cost **${FIRST_NFB_PRICE}** borbcoins. Current balance: ${userData.CurrentBorbcoins}` });
@@ -68,7 +69,6 @@ module.exports = {
             // User have already created a temp nfb 
             if (userData.tempNfbID) {
                 // User haven't given a second argument
-                console.log(accepted);
                 if (accepted == null) {
                     return interaction.editReply({ content: `You already have a nfb. Please decide if you want to keep it or by adding accept or decline after this command.` });
                 } 
@@ -81,11 +81,12 @@ module.exports = {
                     userData.nfbID = userData.tempNfbID;
                     userData.tempNfbID = null;
 
+
                     // Update part values
-                    
+                    USERS.update_parts(userData, NFB_PRICE);
 
                     // Update nfbs
-                    await USERS.update_nfbs({ "nfbID": userData.nfbId, "currentOwner": user.id }, oldNfb);
+                    await USERS.update_nfbs({ "nfbID": userData.nfbID, "currentOwner": user.id }, oldNfb);
                     USERS.update_nfb_user(userData);
                     
                     return interaction.editReply({ content: `Nfb Updated` });
@@ -124,9 +125,11 @@ module.exports = {
 
                     
                     userData.CurrentBorbcoins -= userData.nfbLink == "" ? FIRST_NFB_PRICE : NFB_PRICE;
-                    console.log(images[1])
+
                     if (userData.nfbID == null) {
                         userData.nfbID = images[1];
+                        userData.parts = images[2];
+                        USERS.update_parts(userData, FIRST_NFB_PRICE);
                         await USERS.update_nfbs({ "nfbID": images[1], "nfbLink": imageUrl, "currentOwner": user.id, "timesCreated": images[3].timesCreated + 1 });
                     } 
                     else {
@@ -279,6 +282,7 @@ module.exports = {
 
             // Get name of current NFB
             var oldNfbName = userData.nfbID;
+
             let parts = userData.parts
 
             // Replace part of NFB with temppart.
@@ -289,18 +293,18 @@ module.exports = {
 
             // Create NFB based on new parts
             USERS.get_nfb({id: images[1]}, (newNfb) => {
-                userData.tempPart = null;
                 if (!newNfb) {
                     USERS.update_nfb_user(userData);
                     return interaction.editReply({ content: `This nfb already exist`, ephemeral: false });
                 }
                 NFBHELPERFUNC.CombineImages(images, async (tempFile) => {
                     var imageUrl = await NFBHELPERFUNC.SendImageAndGetImageLink(images[1], tempFile, interaction)
-
+                    
                     userData.nfbID = images[1];
+                    USERS.update_part_value(userData.tempPart.name, userData.tempPart.partType, NFB_PART_PRICE);
+                    userData.tempPart = null;
                     USERS.update_nfb_user(userData);
                     USERS.update_nfbs({ "nfbID": images[1], "nfbLink": imageUrl, "currentOwner": user.id, "parts": parts }, { "nfbID": oldNfbName, "currentOwner": ""});
-
                     return interaction.channel.send({ content: `NFB part merged`, ephemeral: false });
                 })
             });

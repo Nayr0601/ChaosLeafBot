@@ -17,15 +17,17 @@ function AddPartsToDB() {
 // Get images from images folder
 function GetImages() {
     let files = {};
-
+    
     for (var i = 0; i < IMAGEFOLDERS.length; i++) {
-
+        
         files[IMAGEFOLDERS[i]] = fs.readdirSync(image_directory + IMAGEFOLDERS[i] + "/").map(file => {
             if (!file.endsWith(".png")) {
                 console.log(file);
                 return null;
             }
+
             file = file.split(".")[0]
+            USERS.add_part(file, IMAGEFOLDERS[i]);
             return file;
         });
     }

@@ -1,11 +1,8 @@
-/*CREATE TABLE Parts (
-    ID varchar(255) NOT NULL, 
-    pValue int DEFAULT 0, 
-    PartType varchar(12),
-    CONSTRAINT PK_Parts PRIMARY KEY (ID, PartType))*/
+
 
 DROP TABLE users;
 DROP TABLE nfbs;
+DROP TABLE Parts;
 
 CREATE TABLE nfbs (
     nfbID varchar(255) NOT NULL, 
@@ -32,7 +29,11 @@ CREATE TABLE users (
     PRIMARY KEY (ID)
     );
     
-    
+CREATE TABLE Parts (
+    ID varchar(255) NOT NULL, 
+    pValue int DEFAULT 0, 
+    PartType varchar(12),
+    CONSTRAINT PK_Parts PRIMARY KEY (ID, PartType))
 
 
 
