@@ -1,5 +1,5 @@
 const fs = require('fs');
-const Jimp = require("jimp");
+const Jimp = require('jimp').Jimp;
 const image_directory = './src/Bits/';
 const splitSymbol = "_";
 
@@ -35,10 +35,6 @@ function GetImages() {
     return files;
 }
 
-function getRndInteger(min, max) {
-    return Math.floor(Math.random() * (max - min)) + min;
-}
-
 async function CreateRandomNFB(_cb, tries = 0) {
     let rates = [100, 100, 100, 100]; // Rates to get each of the parts
 
@@ -71,29 +67,59 @@ async function CreateRandomNFB(_cb, tries = 0) {
     })
 }
 
+// async function CombineImages(images, _cb) {
+//     var jimps = []
+//     const tempFile = "NFB.png";
+//     //turns the images into readable variables for jimp, then pushes them into a new array
+//     for (var i = 0; i < images[0].length; i++) {
+//         console.log(images[0][i]);
+//         console.log(i)
+//         jimps.push(Jimp.read(images[0][i]))
+//     }
+
+
+//     //creates a promise to handle the jimps
+//     Promise.all(jimps).then(async function (data) {
+//         // --- COMBINE NFB PARTS --- \\
+//         for (var i = 1; i < jimps.length; i++) {
+//             data[0].composite(data[i], 0, 0)
+//         }
+
+//         //this saves our modified image
+//         await data[0].writeAsync(tempFile);  // Wait for the image to be written.
+
+//         await _cb(tempFile);
+
+//         fs.promises.unlink(tempFile);
+//     });
+// }
+
 async function CombineImages(images, _cb) {
-    var jimps = []
     const tempFile = "NFB.png";
-    //turns the images into readable variables for jimp, then pushes them into a new array
-    for (var i = 0; i < images[0].length; i++) {
-        jimps.push(Jimp.read(images[0][i]))
-    }
 
+    try {
+        // Convert all paths into Jimp image objects
+        const jimps = await Promise.all(
+            images[0].map(img => Jimp.read(img))
+        );
 
-    //creates a promise to handle the jimps
-    Promise.all(jimps).then(async function (data) {
         // --- COMBINE NFB PARTS --- \\
-        for (var i = 1; i < jimps.length; i++) {
-            data[0].composite(data[i], 0, 0)
+        for (let i = 1; i < jimps.length; i++) {
+            jimps[0].composite(jimps[i], 0, 0);
         }
 
-        //this saves our modified image
-        await data[0].writeAsync(tempFile);  // Wait for the image to be written.
+        // Save the combined image
+        console.log(jimps[0]);
+        await jimps[0].writeAsync(tempFile);
 
+        // Run the callback with the result file
         await _cb(tempFile);
 
-        fs.promises.unlink(tempFile);
-    });
+        // Clean up the temporary file
+        await fs.promises.unlink(tempFile);
+    } catch (err) {
+        console.error("Error combining images:", err);
+    }
 }
 
 async function SendImageAndGetImageLink(fileName, file, interaction) {

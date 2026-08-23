@@ -11,9 +11,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@discordjs/rest": "^1.7.0",
-    "discord.js": "^14.9.0",
-    "jimp": "^0.22.12",
+    "@discordjs/rest": "^2.6.3",
+    "discord.js": "^14.24.0",
+    "jimp": "^1.6.0",
     "mysql": "^2.18.1"
   },
   "devDependencies": {

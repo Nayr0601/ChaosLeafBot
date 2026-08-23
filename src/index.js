@@ -17,7 +17,7 @@ client.rest.setToken(BOT_TOKEN)
 
 __globals.init();
 
-client.on('ready', () => {
+client.on('clientReady', () => {
     console.log(`Logged in as ${client.user.tag}!`)
 })
 
